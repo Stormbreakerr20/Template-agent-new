@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Dict, List, Any
 from template_renderer import TemplateRenderer
 
+#fastapi app instance
 app = FastAPI()
 
 # Store user_id -> list of generated poster URLs
