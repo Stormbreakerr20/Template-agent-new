@@ -1,51 +1,46 @@
+import os
+import sys
+import uuid
+from typing import Dict, Optional, List
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from typing import Dict, List, Any
-from template_renderer import TemplateRenderer
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from dotenv import load_dotenv
 
-#fastapi app instance
-app = FastAPI()
+# Load environment variables
+load_dotenv()
 
-# Store user_id -> list of generated poster URLs
-user_templates: Dict[str, List[str]] = {}
+# Create FastAPI app first, so health endpoint works even if imports fail
+app = FastAPI(
+    title="Real Estate Poster Template Agent API",
+    description="API for creating customized real estate poster templates",
+    version="1.0.0"
+)
 
-class RenderRequest(BaseModel):
-    template_version: int = Field(..., ge=1, le=3)
-    user_id: str
-    parameters: Dict[str, Any]
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify actual origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.post("/generate-template/")
-def generate_template(body: RenderRequest):
-    try:
-        renderer = TemplateRenderer(template_version=body.template_version)
-        response = renderer.render_template(template_data=body.parameters)
-        image_url = response.get("url")
+# Define template image placeholder URLs
+TEMPLATE_PLACEHOLDER_IMAGES = {
+    1: "https://example.com/templates/modern_home_preview.jpg",
+    2: "https://example.com/templates/house_agent_preview.jpg",
+    3: "https://example.com/templates/best_home_preview.jpg",
+}
 
-        if not image_url:
-            raise HTTPException(status_code=500, detail="Template generation failed")
+# Session storage
+sessions: Dict[str, AgentState] = {}
 
-        # Store the URL in the list for this user_id
-        if body.user_id not in user_templates:
-            user_templates[body.user_id] = []
+@app.get("/templates")
+async def templates_endpoint():
+    """Get information about available templates"""
+    return {"templates": : "Hi"}
 
-        user_templates[body.user_id].append(image_url)
-
-        return {
-            "status": "success",
-            "user_id": body.user_id,
-            "template_version": body.template_version,
-            "generated_url": image_url
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/get-template-urls/")
-def get_template_urls(user_id: str):
-    if user_id in user_templates:
-        return {
-            "user_id": user_id,
-            "generated_urls": user_templates[user_id]
-        }
-    else:
-        raise HTTPException(status_code=404, detail="No templates found for given user ID")
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
